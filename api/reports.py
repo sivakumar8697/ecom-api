@@ -86,35 +86,33 @@ def payout_report(user=None, start_date=None, end_date=None, is_org=False):
 
 
 def dashboard_statistics(user=None):
-    data = {}
+    data = {'team_count': 0,}
     prp_data = PrimaryRewardPoint.objects.all()
     users = User.objects.all()
     if user:
-        primary_user = prp_data.filter(new_user=user.pk).first()
         secondary_rp = SecondaryRewardPoint.objects.filter(eligible_su=user.pk)
-        data['referral_count'] = prp_data.filter(referred_by=user.pk).count()
+        data['referral_count'] = User.objects.filter(referral_id=user.pk).count()
         data['spot_reward'] = SpotRewardPoint.objects.filter(eligible_user=user.pk).count() * irp
-        primary_user_down_lines = User.objects.filter(referral_id=user.referral_id)
-        primary_user_down_lines_referrals = User.objects.filter(referral_id__in=primary_user_down_lines).count()
-        current_user_down_lines = User.objects.filter(referral_id=user.pk)
-        current_user_down_lines_referrals = User.objects.filter(referral_id__in=current_user_down_lines).count()
-        # logged-in user is not excluded in the following query
-        # data['team_count'] = prp_data.filter((Q(PRP_user=primary_user.PRP_user.pk) if primary_user else Q()) |
-        #                                      Q(PRP_user=user.pk) |
-        #                                      Q(PRP_user__in=list(primary_user_down_lines)) |
-        #                                      Q(referred_by__in=list(primary_user_down_lines))).count()
+        if user.referral_id:
+            primary_user_down_lines = User.objects.filter(referral_id=user.referral_id)
+            primary_user_down_lines_referrals = User.objects.filter(referral_id__in=primary_user_down_lines).count()
+            current_user_down_lines = User.objects.filter(referral_id=user.pk)
+            current_user_down_lines_referrals = User.objects.filter(referral_id__in=current_user_down_lines).count()
+            # logged-in user is not excluded in the following query
+            # data['team_count'] = prp_data.filter((Q(PRP_user=primary_user.PRP_user.pk) if primary_user else Q()) |
+            #                                      Q(PRP_user=user.pk) |
+            #                                      Q(PRP_user__in=list(primary_user_down_lines)) |
+            #                                      Q(referred_by__in=list(primary_user_down_lines))).count()
 
-        data['team_count'] = primary_user_down_lines.count() + primary_user_down_lines_referrals
+            data['team_count'] = primary_user_down_lines.count() + primary_user_down_lines_referrals
 
-        # data['self_count'] = prp_data.filter(PRP_user=user.pk).count()
+        # data['self_count'] = current_user_down_lines.count() + current_user_down_lines_referrals
 
-        data['self_count'] = current_user_down_lines.count() + current_user_down_lines_referrals
-
-        if data['team_count'] != data['self_count']:
-            data['senior_support'] = (data['team_count'] - data['self_count'] if data['team_count'] > data[
-                'self_count'] else data['self_count'] - data['team_count']) - 1
-        else:
-            data['senior_support'] = 0
+        # if data['team_count'] != data['self_count']:
+        #     data['senior_support'] = (data['team_count'] - data['self_count'] if data['team_count'] > data[
+        #         'self_count'] else data['self_count'] - data['team_count']) - 1
+        # else:
+        #     data['senior_support'] = 0
         prp_count = prp_data.filter(PRP_user=user.pk).values_list('pk', flat=True)
         data['primary_reward'] = PRPMatching.objects.filter(PRP_id__in=prp_count).count() * prp
         data['secondary_reward'] = secondary_rp.count() * srp

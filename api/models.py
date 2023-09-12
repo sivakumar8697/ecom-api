@@ -134,10 +134,36 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_tax = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     shipping_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
+    invoice_number = models.CharField(max_length=20, unique=True, null=True,
+                                      help_text="Invoice number starting with 'M' and 8 digits.")
+    delivered_on = models.DateField(null=True, blank=True, help_text="Date when the order was delivered.")
+    delivery_partner = models.CharField(max_length=255, null=True, blank=True, help_text="Delivery partner's name.")
 
     @property
     def order_items(self):
         return self.order_items.all()
+
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            # Generate a new invoice number if it doesn't already exist
+            last_order = Order.objects.order_by('-date_of_transaction').first()
+            if last_order:
+                last_invoice_number = last_order.invoice_number
+                if last_invoice_number:
+                    # Extract the numeric part and increment it
+                    last_number = int(last_invoice_number[1:])
+                    new_number = last_number + 1
+                    new_invoice_number = f"M{new_number:07d}"  # Format to 7 digits with 'M' prefix
+                else:
+                    # If the last invoice number is invalid, start from 'M00000001'
+                    new_invoice_number = "M00000001"
+            else:
+                # If there are no previous orders, start from 'M00000001'
+                new_invoice_number = "M00000001"
+
+            self.invoice_number = new_invoice_number
+
+        super().save(*args, **kwargs)
 
 
 class OrderItem(models.Model):

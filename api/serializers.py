@@ -101,7 +101,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ('order_id', 'total_amount', "total_tax", "shipping_address", 'order_items', 'user')
+        fields = ('order_id', 'invoice_number', 'total_amount', "total_tax", "shipping_address", 'order_items', 'user',
+                  'delivered_on', 'delivery_partner')
 
     def create(self, validated_data):
         request = self.context.get('request')
