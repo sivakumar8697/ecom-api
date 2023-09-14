@@ -101,7 +101,7 @@ class User(AbstractUser):
 class Configuration(models.Model):
     config_name = models.CharField(max_length=100, unique=True, null=True)
     value = models.DecimalField(max_digits=12, decimal_places=2, null=True)
-    decimal_value = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    decimal_value = models.DecimalField(max_digits=12, decimal_places=5, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Convert percentage value to decimal value
@@ -134,6 +134,10 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     total_tax = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     shipping_address = models.ForeignKey(Address, on_delete=models.SET_NULL, null=True)
+    invoice_number = models.CharField(max_length=20, unique=True, null=True,
+                                      help_text="Invoice number starting with 'M' and 8 digits.")
+    delivered_on = models.DateField(null=True, blank=True, help_text="Date when the order was delivered.")
+    delivery_partner = models.CharField(max_length=255, null=True, blank=True, help_text="Delivery partner's name.")
 
     @property
     def order_items(self):
