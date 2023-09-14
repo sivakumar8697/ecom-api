@@ -101,7 +101,7 @@ class User(AbstractUser):
 class Configuration(models.Model):
     config_name = models.CharField(max_length=100, unique=True, null=True)
     value = models.DecimalField(max_digits=12, decimal_places=2, null=True)
-    decimal_value = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    decimal_value = models.DecimalField(max_digits=12, decimal_places=5, blank=True, null=True)
 
     def save(self, *args, **kwargs):
         # Convert percentage value to decimal value
