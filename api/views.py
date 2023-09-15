@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -135,6 +136,20 @@ class CreateOrderView(CreateAPIView):
 
     def perform_create(self, request, *args, **kwargs):
         data = request.data
+        # Calculate new price and tax values for each item      # To be commented out in next release
+        order_items = data['order_items']
+        for item in order_items:
+            item['price'] = 2208.00
+            item['tax'] = 125.00
+
+        # Calculate new total_amount and total_tax
+        total_amount = sum(item['price'] for item in order_items)
+        total_tax = sum(item['tax'] for item in order_items)
+
+        # Update the request data with the new total_amount and total_tax
+        data['total_amount'] = Decimal(total_amount)
+        data['total_tax'] = Decimal(total_tax)
+        # --- end ---
         user = data['user']
         order_status = request.initial_data['order_complete']
         serializer = self.get_serializer(data=data)

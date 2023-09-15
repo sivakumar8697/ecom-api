@@ -123,6 +123,10 @@ class OrderSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         serializer = UserSerializer(self.context['request'].user)
         representation['user'] = serializer.data
+        # Add the updated total_amount and total_tax to the representation          #to be commented out in next release
+        representation['total_amount'] = instance['total_amount']
+        representation['total_tax'] = instance['total_tax']
+        # --- end ---
         return representation
 
 
