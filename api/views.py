@@ -40,7 +40,7 @@ class GenerateOTPAPIView(APIView):
             'mobile': mobile_number,
             'hash': auth_hash
         }
-        # send_otp_sms(mobile_number, otp)
+        send_otp_sms(mobile_number, otp)
         return Response(response)
 
 

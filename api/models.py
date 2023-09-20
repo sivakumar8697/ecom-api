@@ -156,10 +156,10 @@ class Order(models.Model):
                     new_invoice_number = f"M{new_number:07d}"  # Format to 7 digits with 'M' prefix
                 else:
                     # If the last invoice number is invalid, start from 'M00000001'
-                    new_invoice_number = "M00000001"
+                    new_invoice_number = "M0000001"
             else:
                 # If there are no previous orders, start from 'M00000001'
-                new_invoice_number = "M00000001"
+                new_invoice_number = "M0000001"
 
             self.invoice_number = new_invoice_number
 
