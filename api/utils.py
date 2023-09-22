@@ -1,4 +1,5 @@
 import hashlib
+import requests
 import random
 import uuid
 from datetime import datetime, timedelta
@@ -39,13 +40,38 @@ def generate_otp():
 
 
 def send_otp_sms(mobile_number, otp):
-    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
-    message = client.messages.create(
-        body=f'Your OTP is: {otp}',
-        from_=settings.TWILIO_PHONE_NUMBER,
-        to=mobile_number
-    )
-    return message.sid
+    url = "http://route.digimiles.in/bulksms/bulksms"
+
+    # Replace with your Digimiles username and password
+    username = "DG35-merka"
+    password = "digimile"
+
+    params = {
+        "username": username,
+        "password": password,
+        "type": 0,
+        "dlr": 1,
+        "destination": mobile_number,
+        "source": "MERKAM",
+        "message": f"Dear User, Your one-time password {otp} is valid for 10 minutes. Do not share with anyone. Thank You, Team Merka Marketing.",
+        "entityid": "1101582610000072947",
+        "tempid": "1107169529512884414"
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        # The response may contain useful information, such as the message ID, which you can extract if needed.
+        response_data = response.json()
+        message_id = response_data.get("messageId")
+
+        return message_id
+
+    except requests.exceptions.RequestException as e:
+        # Handle exceptions or errors here
+        print(f"Error sending SMS: {str(e)}")
+        return None
 
 
 def gen_auth_token():

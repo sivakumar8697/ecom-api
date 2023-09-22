@@ -40,6 +40,9 @@ class GenerateOTPAPIView(APIView):
             'mobile': mobile_number,
             'hash': auth_hash
         }
+        # Remove the country code from the mobile number
+        if mobile_number.startswith("+"):
+            mobile_number = mobile_number[3:]
         send_otp_sms(mobile_number, otp)
         return Response(response)
 
