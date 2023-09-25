@@ -15,7 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from .cron import referral_report_cron
 from .models import Payout, RewardClaim, Order, BankDetail, KYCImage
 from .reports import dashboard_statistics, custom_payout_report, team_details_report, primary_reward_criteria_status, \
-    referral_report
+    referral_report, team_details_tree_report
 from .serializers import UserSerializer, OrderSerializer, PrimaryRewardPointSerializer, PRPMatchingSerializer, \
     SecondaryRewardPointSerializer, PayoutSerializer, BankDetailSerializer, KYCImageSerializer, \
     SpotRewardPointSerializer
@@ -339,3 +339,11 @@ class KYCImageView(ListCreateAPIView):
             if KYCImage.objects.filter(user=user, proof_type='ID2').count() >= 2:
                 raise serializers.ValidationError("Maximum of two 'ID2' proof images allowed.")
         serializer.save(user=user)
+
+
+class TeamDetailsTreeView(APIView):
+
+    def get(self, request):
+        current_user = request.user
+        team_details_tree = team_details_tree_report(current_user)
+        return Response(team_details_tree)
