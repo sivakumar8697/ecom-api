@@ -154,16 +154,16 @@ class CreateOrderView(CreateAPIView):
         data['total_amount'] = Decimal(total_amount)
         data['total_tax'] = Decimal(total_tax)
         # --- end ---
-        user = data['user']
+        user = self.request.user
         order_status = request.initial_data['order_complete']
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         headers = self.get_success_headers(serializer.validated_data)
 
-        if 'referral_id' in user.keys() and user.get('referral_id') is not None and order_status:
-            referred_user = User.objects.filter(mobile_number__contains=user.get('referral_id')).first()
-            reward_allocation_ = reward_allocation(User.objects.get(pk=user.get('id')), referred_user)
+        if user.referral_id is not None and order_status:
+            referred_user = User.objects.filter(pk=user.referral_id).first()
+            reward_allocation_ = reward_allocation(User.objects.get(pk=user.pk), referred_user)
             prp_serializer = PrimaryRewardPointSerializer(data=reward_allocation_)
             prp_serializer.is_valid(raise_exception=True)
             prp_serializer.save()
