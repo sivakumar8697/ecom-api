@@ -341,7 +341,7 @@ def primary_reward_criteria_status(user):
         data = {}
         data['mobile_number'] = user.mobile_number.national_number
         data['name'] = user.full_name
-        data['RP_criteria'] = rpc_criteria[i]
+        data['RP_criteria'] = list(rpc_values.values())[i]
         data['RP_complete'] = RP_complete[i]
         data['RP_required'] = RP_required[i]
         data['Status'] = status[i]
