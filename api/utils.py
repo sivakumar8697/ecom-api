@@ -53,7 +53,8 @@ def send_otp_sms(mobile_number, otp):
         "dlr": 1,
         "destination": mobile_number,
         "source": "MERKAM",
-        "message": f"Dear User, Your one-time password {otp} is valid for 10 minutes. Do not share with anyone. Thank You, Team Merka Marketing.",
+        "message": f"Dear User, Your one-time password {otp} is valid for 10 minutes. Do not share with anyone. "
+                   f"Thank You, Team Merka Marketing.",
         "entityid": "1101582610000072947",
         "tempid": "1107169529512884414"
     }

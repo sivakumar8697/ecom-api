@@ -29,9 +29,7 @@ def matching_report(user):
 table_exists = 'api_configuration' in connection.introspection.table_names()
 
 if table_exists:
-    config = Configuration.objects.values('config_name', 'value').filter(
-        config_name__in=['PRP', 'SRP', 'IRP', 'RPC1', 'RPC2', 'RPC3', 'RPC4']
-    )
+    config = Configuration.objects.values('config_name', 'value').all()
 
     if config is not None:
         config_dict = {data['config_name']: data['value'] for data in config}
@@ -39,10 +37,11 @@ if table_exists:
         prp = int(config_dict.get('PRP', 0))
         srp = int(config_dict.get('SRP', 0))
         irp = int(config_dict.get('IRP', 0))
-        RPC1 = int(config_dict.get('RPC1', 0))
-        RPC2 = int(config_dict.get('RPC2', 0))
-        RPC3 = int(config_dict.get('RPC3', 0))
-        RPC4 = int(config_dict.get('RPC4', 0))
+
+        # Dynamically fetch and assign values for RPC1, RPC2, RPC3, etc.
+        rpc_values = {key: int(value) for key, value in config_dict.items() if key.startswith('RPC')}
+        for i in range(1, len(rpc_values) + 1):
+            globals()[f'RPC{i}'] = rpc_values.get(f'RPC{i}', 0)
 
 
 # <----.----->
@@ -86,7 +85,7 @@ def payout_report(user=None, start_date=None, end_date=None, is_org=False):
 
 
 def dashboard_statistics(user=None):
-    data = {'team_count': 0,}
+    data = {'team_count': 0, }
     prp_data = PrimaryRewardPoint.objects.all()
     users = User.objects.all()
     if user:
@@ -295,15 +294,19 @@ def team_details_report(current_user, request):
 
 
 def primary_reward_criteria_status(user):
-    prp_count = PrimaryRewardPoint.objects.filter(PRP_user=user.pk).count()
+    prp_data = PrimaryRewardPoint.objects.filter(PRP_user=user.pk).values_list('pk', flat=True)
+    prp_count = PRPMatching.objects.filter(PRP_id__in=prp_data).count()
     total_rewards = prp_count * prp
     claimed_rewards = RewardClaim.objects.filter(user=user.pk).order_by("criteria")
-    RP_criteria = [RPC1, RPC2, RPC3, RPC4]
-    RP_complete = [0] * len(RP_criteria)
-    RP_required = [0] * len(RP_criteria)
-    status = ['In-progress'] * len(RP_criteria)
-    claimed_on = [None] * len(RP_criteria)
-    completed_rewards = [None] * len(RP_criteria)
+
+    # Create RPC criteria dynamically
+    rpc_criteria = list(rpc_values.keys())
+
+    RP_complete = [0] * len(rpc_criteria)
+    RP_required = [0] * len(rpc_criteria)
+    status = ['In-progress'] * len(rpc_criteria)
+    claimed_on = [None] * len(rpc_criteria)
+    completed_rewards = [None] * len(rpc_criteria)
 
     for i, criteria in enumerate(claimed_rewards):
         if criteria.claimed_on and criteria.status == 'claimed':
@@ -314,26 +317,16 @@ def primary_reward_criteria_status(user):
             status[i] = criteria.status
 
     for i, reward in enumerate(completed_rewards):
-        if reward == 'RPC1':
-            completed_rewards[i] = RPC1
-            total_rewards -= RPC1
-            RP_complete[i] = RPC1
-        if reward == 'RPC2':
-            completed_rewards[i] = RPC2
-            total_rewards -= RPC2
-            RP_complete[i] = RPC2
-        if reward == 'RPC3':
-            completed_rewards[i] = RPC3
-            total_rewards -= RPC3
-            RP_complete[i] = RPC3
-        if reward == 'RPC4':
-            completed_rewards[i] = RPC4
-            total_rewards -= RPC4
-            RP_complete[i] = RPC4
+        if reward is not None:
+            for j, rpc in enumerate(rpc_criteria):
+                if reward == f'RPC{j + 1}':
+                    completed_rewards[i] = rpc_values[rpc]
+                    total_rewards -= rpc_values[rpc]
+                    RP_complete[j] = rpc_values[rpc]
 
     total_rewards_added = False
 
-    for i, criteria in enumerate(RP_criteria):
+    for i, criteria in enumerate(list(rpc_values.values())):
         if total_rewards < criteria and RP_complete[i] != criteria:
             RP_required[i] = criteria - total_rewards
             if not total_rewards_added:
@@ -344,11 +337,11 @@ def primary_reward_criteria_status(user):
 
     result = []
 
-    for i, v in enumerate(RP_criteria):
+    for i, v in enumerate(rpc_criteria):
         data = {}
         data['mobile_number'] = user.mobile_number.national_number
         data['name'] = user.full_name
-        data['RP_criteria'] = RP_criteria[i]
+        data['RP_criteria'] = rpc_criteria[i]
         data['RP_complete'] = RP_complete[i]
         data['RP_required'] = RP_required[i]
         data['Status'] = status[i]

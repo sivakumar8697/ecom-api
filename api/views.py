@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 from rest_framework import status, serializers
 from rest_framework.generics import RetrieveUpdateAPIView, CreateAPIView, ListCreateAPIView, ListAPIView, \
@@ -216,28 +217,36 @@ class CreatePayoutView(ListCreateAPIView):
 
 class PayoutReportView(APIView):
 
-    def post(self, request):
-        users = User.objects.all()
-        if 'start_date' in request.data and 'end_date' in request.data:
-            start_date = request.data['start_date']
-            end_date = request.data['end_date']
-            data = {
-                "start_date": start_date,
-                "end_date": end_date,
-                "reportData": []
-            }
+    def generate_user_report(self, user, start_date, end_date):
+        report_data = custom_payout_report(user, start_date, end_date)
+        user_data = {
+            "Name": user.full_name,
+            "MobileNo": user.mobile_number.national_number,
+            "userId": str(user.pk),
+            **report_data  # Include the report data for the user
+        }
+        return user_data
 
+    def post(self, request):
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        data = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "reportData": []
+        }
+
+        if not isinstance(request.user, AnonymousUser):
+            user = request.user
+            user_data = self.generate_user_report(user, start_date, end_date)
+            data["reportData"].append(user_data)
+        else:
+            users = User.objects.all()
             for user in users:
-                report_data = custom_payout_report(user, start_date, end_date)
-                user_data = {
-                    "Name": user.full_name,
-                    "MobileNo": user.mobile_number.national_number,
-                    "userId": str(user.pk),
-                    **report_data  # Include the report data for the user
-                }
+                user_data = self.generate_user_report(user, start_date, end_date)
                 data["reportData"].append(user_data)
 
-            return Response(data)
+        return Response(data)
 
 
 class RewardReportView(APIView):
