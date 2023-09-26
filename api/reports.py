@@ -94,7 +94,9 @@ def dashboard_statistics(user=None):
         data['spot_reward'] = SpotRewardPoint.objects.filter(eligible_user=user.pk).count() * irp
         if user.referral_id:
             primary_user_down_lines = User.objects.filter(referral_id=user.referral_id)
-            primary_user_down_lines_referrals = User.objects.filter(referral_id__in=primary_user_down_lines).count()
+            primary_user_down_lines_referral_ids = list(primary_user_down_lines.values_list('pk', flat=True))
+            primary_user_down_lines_referrals = User.objects.filter(
+                referral_id__in=primary_user_down_lines_referral_ids).count()
             current_user_down_lines = User.objects.filter(referral_id=user.pk)
             current_user_down_lines_referrals = User.objects.filter(referral_id__in=current_user_down_lines).count()
             # logged-in user is not excluded in the following query
