@@ -217,42 +217,30 @@ def custom_payout_report(user=None, start_date=None, end_date=None):
         return data
 
 
-def team_details_report(current_user, request):
+def team_details_report(current_user):
     team_details = []
-    referrals = PrimaryRewardPoint.objects.all()
 
-    if request.data.get("level-1"):
-        level_1 = referrals.filter(referred_by=str(current_user.pk))
-        for referral in level_1:
+    def get_user_details(user, level):
+        if level != 0:
             data = {}
-            user = User.objects.get(pk=referral.new_user)
-            data['level'] = "Level 1"
+            data['level'] = level
             data['user_id'] = user.pk
             data['name'] = user.full_name
             data['city'] = user.addresses.first().city if user.addresses.first() else "City Unknown"
             data['referral'] = user.referral_id
             data['status'] = "Active" if user.is_active else "Inactive"
             data['registration_date'] = user.date_joined.date()
-            order = Order.objects.filter(user_id=user.pk).first()
+            order = Order.objects.filter(user=user).first()
             data['order_placed'] = order.total_amount if order is not None else None
             team_details.append(data)
 
-    if request.data.get("level-2"):
-        level_2 = referrals.filter(PRP_user=current_user.pk).exclude(referred_by=Cast(F('PRP_user'),
-                                                                                      output_field=models.CharField()))
-        for referral in level_2:
-            data = {}
-            user = User.objects.get(pk=referral.new_user)
-            data['level'] = "Level 2"
-            data['user_id'] = user.pk
-            data['name'] = user.full_name
-            data['city'] = user.addresses.first().city if user.addresses.first() else "City Unknown"
-            data['referral'] = user.referral_id
-            data['status'] = "Active" if user.is_active else "Inactive"
-            data['registration_date'] = user.date_joined.date()
-            order = Order.objects.filter(user_id=user.pk).first()
-            data['order_placed'] = order.total_amount if order is not None else None
-            team_details.append(data)
+        # Recursively get user details for the next level
+        referrals = User.objects.filter(referral_id=user.pk)
+        for referral in referrals:
+            get_user_details(referral, level + 1)
+
+    # Start with level 0 for the current user
+    get_user_details(current_user, level=0)
 
     return team_details
 

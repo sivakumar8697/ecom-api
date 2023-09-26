@@ -292,7 +292,7 @@ class ReferralReportView(APIView):
 class TeamDetailsView(APIView):
     def post(self, request):
         current_user = request.user
-        team_details = team_details_report(current_user, request)
+        team_details = team_details_report(current_user)
         return Response(team_details)
 
 
