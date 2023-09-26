@@ -97,8 +97,8 @@ def dashboard_statistics(user=None):
             primary_user_down_lines_referral_ids = list(primary_user_down_lines.values_list('pk', flat=True))
             primary_user_down_lines_referrals = User.objects.filter(
                 referral_id__in=primary_user_down_lines_referral_ids).count()
-            current_user_down_lines = User.objects.filter(referral_id=user.pk)
-            current_user_down_lines_referrals = User.objects.filter(referral_id__in=current_user_down_lines).count()
+            # current_user_down_lines = User.objects.filter(referral_id=user.pk)
+            # current_user_down_lines_referrals = User.objects.filter(referral_id__in=current_user_down_lines).count()
             # logged-in user is not excluded in the following query
             # data['team_count'] = prp_data.filter((Q(PRP_user=primary_user.PRP_user.pk) if primary_user else Q()) |
             #                                      Q(PRP_user=user.pk) |
