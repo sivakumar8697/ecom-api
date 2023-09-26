@@ -264,7 +264,7 @@ def team_details_tree_report(current_user):
             'referral': user.referral_id,
             'status': "Active" if user.is_active else "Inactive",
             'registration_date': user.date_joined.date(),
-            'referrals': []  # Initialize an empty list for referrals
+            'children': []  # Initialize an empty list for referrals
         }
         order = Order.objects.filter(user_id=user.pk).first()
         data['order_placed'] = order.total_amount if order is not None else None
@@ -276,7 +276,7 @@ def team_details_tree_report(current_user):
 
         for referral in referrals:
             referral_data = build_team_tree(referral)  # Recursive call to build referral tree
-            user_data['referrals'].append(referral_data)
+            user_data['children'].append(referral_data)
 
         return user_data
 
