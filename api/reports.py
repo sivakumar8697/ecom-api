@@ -237,7 +237,7 @@ def team_details_report(current_user):
             data['registration_date'] = user.date_joined.date()
             order = Order.objects.filter(user=user).first()
             data['order_placed'] = order.total_amount if order is not None else None
-            data['order_id'] = order.pk
+            data['order_id'] = order.pk if order is not None else None
             data['admin_status'] = user.is_admin
             team_details.append(data)
 
