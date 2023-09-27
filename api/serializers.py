@@ -5,8 +5,27 @@ from rest_framework import serializers
 
 from .models import User, OrderItem, Address, Order, PrimaryRewardPoint, PRPMatching, SecondaryRewardPoint, Payout, \
     BankDetail, KYCImage, SpotRewardPoint
+from .utils import reward_allocation
 
 User = get_user_model()
+
+
+def reward_matching(user):
+    # Reward logic
+    referred_user = User.objects.filter(pk=user.referral_id).first()
+    reward_allocation_ = reward_allocation(User.objects.get(pk=user.pk), referred_user)
+    prp_serializer = PrimaryRewardPointSerializer(data=reward_allocation_)
+    prp_serializer.is_valid(raise_exception=True)
+    prp_serializer.save()
+    if reward_allocation_['matching_user2'] is not None:
+        reward_allocation_['PRP_id'] = prp_serializer.instance.pk
+        prp_matching = PRPMatchingSerializer(data=reward_allocation_)
+        prp_matching.is_valid(raise_exception=True)
+        prp_matching.save()
+        if reward_allocation_['secondary_match'] is not None:
+            srp_matching = SecondaryRewardPointSerializer(data=reward_allocation_)
+            srp_matching.is_valid(raise_exception=True)
+            srp_matching.save()
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -126,13 +145,16 @@ class OrderSerializer(serializers.ModelSerializer):
         instance.delivery_partner = validated_data.get('delivery_partner', instance.delivery_partner)
         instance.payment_method = validated_data.get('payment_method', instance.payment_method)
         instance.save()
+        if instance.payment_status and instance.payment_status == 'completed':
+            if instance.user.referral_id is not None:
+                reward_matching(instance.user)
 
         return instance
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        if isinstance(instance, Order):
+        if isinstance(instance, Order) and 'request' in self.context:
             serializer = UserSerializer(self.context['request'].user)
             representation['user'] = serializer.data
             # Add the updated total_amount and total_tax to the representation      #to be commented out in next release

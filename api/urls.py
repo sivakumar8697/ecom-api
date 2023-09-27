@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import GenerateOTPAPIView, VerifyOTPAPIView, UserDetailsAPIView, RefreshTokenAPIView, CreateOrderView, \
     CreatePayoutView, PayoutReportView, DashboardView, TeamDetailsView, RewardReportView, FetchUserView, OrderList, \
-    OrderDetail, BankDetailListCreateView, KYCImageView, ReferralReportView, TeamDetailsTreeView
+    OrderDetail, BankDetailListCreateView, KYCImageView, ReferralReportView, TeamDetailsTreeView, OrderUpdateView
 
 urlpatterns = [
     path('otp/generate/', GenerateOTPAPIView.as_view(), name='generate_otp'),
@@ -20,6 +20,7 @@ urlpatterns = [
     path('fetch-user/', FetchUserView.as_view(), name='fetch_user'),
     path('orders/', OrderList.as_view(), name='order-list'),
     path('orders/<int:pk>/', OrderDetail.as_view(), name='order-detail'),
+    path('orders-update/', OrderUpdateView.as_view(), name='order-update'),
     path('bank-details/', BankDetailListCreateView.as_view(), name='bank-detail-list-create'),
     path('kyc-images/', KYCImageView.as_view(), name='kyc-images')
 ]

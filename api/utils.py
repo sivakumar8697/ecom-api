@@ -9,6 +9,7 @@ from django.conf import settings
 from django.db.models import F
 from django.db.models import Q
 from django.utils import timezone
+from rest_framework import permissions
 from twilio.rest import Client
 
 from api import models
@@ -17,6 +18,11 @@ fernet_key = Fernet.generate_key()
 url_safe_key = fernet_key.decode('utf-8')
 SECRET_KEY = url_safe_key.encode('utf-8')
 fernet = Fernet(SECRET_KEY)
+
+
+class IsAdminUser(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_admin
 
 
 def generate_user_id(date_joined, mobile_number):

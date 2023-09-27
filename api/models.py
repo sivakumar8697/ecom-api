@@ -35,6 +35,11 @@ REWARD_CLAIM = (
 PROOF = (('ID1', 'ID1'),
          ('ID2', 'ID2'))
 
+PAYMENT_STATUS_CHOICES = [
+        ('pending', 'pending'),
+        ('completed', 'completed')
+    ]
+
 
 class PossiblePhoneNumberField(PhoneNumberField):
     """Less strict field for phone numbers written to database."""
@@ -138,7 +143,7 @@ class Order(models.Model):
                                       help_text="Invoice number starting with 'M' and 8 digits.")
     delivered_on = models.DateField(null=True, blank=True, help_text="Date when the order was delivered.")
     delivery_partner = models.CharField(max_length=255, null=True, blank=True, help_text="Delivery partner's name.")
-    payment_status = models.BooleanField(default=False)
+    payment_status = models.CharField(max_length=30, choices=PAYMENT_STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=20, null=True, blank=True)
     @property
     def order_items(self):

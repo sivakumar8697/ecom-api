@@ -16,10 +16,9 @@ from .cron import referral_report_cron
 from .models import Payout, RewardClaim, Order, BankDetail, KYCImage
 from .reports import dashboard_statistics, custom_payout_report, team_details_report, primary_reward_criteria_status, \
     referral_report, team_details_tree_report
-from .serializers import UserSerializer, OrderSerializer, PrimaryRewardPointSerializer, PRPMatchingSerializer, \
-    SecondaryRewardPointSerializer, PayoutSerializer, BankDetailSerializer, KYCImageSerializer, \
-    SpotRewardPointSerializer
-from .utils import generate_otp, gen_auth_token, hash_otp, reward_allocation, send_otp_sms
+from .serializers import UserSerializer, OrderSerializer, PayoutSerializer, BankDetailSerializer, KYCImageSerializer, \
+    SpotRewardPointSerializer, reward_matching
+from .utils import generate_otp, gen_auth_token, hash_otp, send_otp_sms, IsAdminUser
 
 User = get_user_model()
 
@@ -134,24 +133,6 @@ class UserDetailsAPIView(RetrieveUpdateAPIView):
         return Response(serializer.data)
 
 
-def reward_matching(user):
-    # Reward logic
-    referred_user = User.objects.filter(pk=user.referral_id).first()
-    reward_allocation_ = reward_allocation(User.objects.get(pk=user.pk), referred_user)
-    prp_serializer = PrimaryRewardPointSerializer(data=reward_allocation_)
-    prp_serializer.is_valid(raise_exception=True)
-    prp_serializer.save()
-    if reward_allocation_['matching_user2'] is not None:
-        reward_allocation_['PRP_id'] = prp_serializer.instance.pk
-        prp_matching = PRPMatchingSerializer(data=reward_allocation_)
-        prp_matching.is_valid(raise_exception=True)
-        prp_matching.save()
-        if reward_allocation_['secondary_match'] is not None:
-            srp_matching = SecondaryRewardPointSerializer(data=reward_allocation_)
-            srp_matching.is_valid(raise_exception=True)
-            srp_matching.save()
-
-
 class CreateOrderView(CreateAPIView):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
@@ -185,7 +166,7 @@ class CreateOrderView(CreateAPIView):
         serializer.save()
         headers = self.get_success_headers(serializer.validated_data)
 
-        if data.get('payment_status') and data['payment_status'] is True:
+        if data.get('payment_status') and data['payment_status'] == 'completed':
             if user.referral_id is not None and order_status:
                 reward_matching(user)
 
@@ -195,15 +176,66 @@ class CreateOrderView(CreateAPIView):
         # Add logic for updating payment_status, delivered_on, delivery_partner, and payment_method
         instance = self.get_queryset().first()  # Get the existing order
         data = request.data
-        user = self.request.user
-
-        if data.get('payment_status') and data['payment_status'] is True:
-            if user.referral_id is not None:
-                reward_matching(user)
-
         serializer = self.get_serializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderUpdateView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        # Filter orders based on the payment_status condition
+        payment_status = request.query_params.get('payment_status', None)
+
+        if payment_status:
+            if payment_status == 'pending':
+                orders = Order.objects.filter(payment_status='pending')
+            elif payment_status == 'completed':
+                orders = Order.objects.filter(payment_status='completed')
+            else:
+                return Response({'detail': 'Invalid payment_status value'}, status=400)
+        else:
+            return Response({'detail': 'payment_status parameter is required'}, status=400)
+
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        # Retrieve the order_id from the query parameters
+        order_id = request.query_params.get('order_id')
+
+        if not order_id:
+            return Response({'detail': 'order_id parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Try to get the order from the database
+            order = Order.objects.get(order_id=order_id)
+        except Order.DoesNotExist:
+            return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Extract and update fields from the request data if they exist
+        if 'delivered_on' in request.data:
+            order.delivered_on = request.data['delivered_on']
+
+        if 'delivery_partner' in request.data:
+            order.delivery_partner = request.data['delivery_partner']
+
+        if 'payment_status' in request.data:
+            # Validate that payment_status is either 'pending' or 'completed'
+            if request.data['payment_status'] in ['pending', 'completed']:
+                order.payment_status = request.data['payment_status']
+            else:
+                return Response({'detail': 'Invalid payment_status value'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'payment_method' in request.data:
+            order.payment_method = request.data['payment_method']
+
+        order.save()  # Save the updated order
+
+        # Serialize and return the updated order
+        serializer = OrderSerializer(order)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

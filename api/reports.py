@@ -118,7 +118,7 @@ def dashboard_statistics(user=None):
         data['primary_reward'] = PRPMatching.objects.filter(PRP_id__in=prp_count).count() * prp
         data['secondary_reward'] = secondary_rp.count() * srp
         data['total_reward'] = data['primary_reward'] + data['secondary_reward'] + data['spot_reward']
-
+        data['admin_status'] = user.is_admin
         return data
 
     else:
@@ -193,14 +193,17 @@ def custom_payout_report(user=None, start_date=None, end_date=None):
         primary_reward_count = PRPMatching.objects.filter(PRP_id__in=primary_reward_total).count()
         referral_count = primary_rp.filter(referred_by=user.pk).count()
         primary_reward = primary_reward_count * prp
-        secondary_reward = secondary_rp.filter(eligible_su=user.pk).count() * srp
-        spot_reward = SpotRewardPoint.objects.filter(eligible_user=user.pk).count() * irp
+        secondary_reward_count = secondary_rp.filter(eligible_su=user.pk).count()
+        spot_reward_count = SpotRewardPoint.objects.filter(eligible_user=user.pk).count()
 
+        data['admin_status'] = user.is_admin
+        data['referral_count'] = referral_count
         data['primary_reward'] = primary_reward
         data['prp_count'] = primary_reward_count
-        data['secondary_reward'] = secondary_reward
-        data['referral_count'] = referral_count
-        data['spot_reward'] = spot_reward
+        data['secondary_reward'] = secondary_reward_count * srp
+        data['srp_count'] = secondary_reward_count
+        data['spot_reward'] = spot_reward_count * irp
+        data['irp_count'] = spot_reward_count
 
         values = [value for value in [data['primary_reward'], data['secondary_reward'], data['spot_reward']] if
                   value is not None]
@@ -234,6 +237,8 @@ def team_details_report(current_user):
             data['registration_date'] = user.date_joined.date()
             order = Order.objects.filter(user=user).first()
             data['order_placed'] = order.total_amount if order is not None else None
+            data['order_id'] = order.pk
+            data['admin_status'] = user.is_admin
             team_details.append(data)
 
         # Recursively get user details for the next level
