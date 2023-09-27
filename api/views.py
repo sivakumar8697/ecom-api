@@ -134,11 +134,35 @@ class UserDetailsAPIView(RetrieveUpdateAPIView):
         return Response(serializer.data)
 
 
+def reward_matching(user):
+    # Reward logic
+    referred_user = User.objects.filter(pk=user.referral_id).first()
+    reward_allocation_ = reward_allocation(User.objects.get(pk=user.pk), referred_user)
+    prp_serializer = PrimaryRewardPointSerializer(data=reward_allocation_)
+    prp_serializer.is_valid(raise_exception=True)
+    prp_serializer.save()
+    if reward_allocation_['matching_user2'] is not None:
+        reward_allocation_['PRP_id'] = prp_serializer.instance.pk
+        prp_matching = PRPMatchingSerializer(data=reward_allocation_)
+        prp_matching.is_valid(raise_exception=True)
+        prp_matching.save()
+        if reward_allocation_['secondary_match'] is not None:
+            srp_matching = SecondaryRewardPointSerializer(data=reward_allocation_)
+            srp_matching.is_valid(raise_exception=True)
+            srp_matching.save()
+
+
 class CreateOrderView(CreateAPIView):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
+    queryset = Order.objects.all()
 
     def perform_create(self, request, *args, **kwargs):
+        # Check if an order already exists for the user
+        existing_order = Order.objects.filter(user=self.request.user).first()
+        if existing_order:
+            return self.perform_update(request, *args, **kwargs)
+
         data = request.data
         # Calculate new price and tax values for each item      # To be commented out in next release
         order_items = data['order_items']
@@ -161,23 +185,26 @@ class CreateOrderView(CreateAPIView):
         serializer.save()
         headers = self.get_success_headers(serializer.validated_data)
 
-        if user.referral_id is not None and order_status:
-            referred_user = User.objects.filter(pk=user.referral_id).first()
-            reward_allocation_ = reward_allocation(User.objects.get(pk=user.pk), referred_user)
-            prp_serializer = PrimaryRewardPointSerializer(data=reward_allocation_)
-            prp_serializer.is_valid(raise_exception=True)
-            prp_serializer.save()
-            if reward_allocation_['matching_user2'] is not None:
-                reward_allocation_['PRP_id'] = prp_serializer.instance.pk
-                prp_matching = PRPMatchingSerializer(data=reward_allocation_)
-                prp_matching.is_valid(raise_exception=True)
-                prp_matching.save()
-                if reward_allocation_['secondary_match'] is not None:
-                    srp_matching = SecondaryRewardPointSerializer(data=reward_allocation_)
-                    srp_matching.is_valid(raise_exception=True)
-                    srp_matching.save()
+        if data.get('payment_status') and data['payment_status'] is True:
+            if user.referral_id is not None and order_status:
+                reward_matching(user)
 
-        return Response(serializer.validated_data, status=status.HTTP_201_CREATED, headers=headers)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_update(self, request, *args, **kwargs):
+        # Add logic for updating payment_status, delivered_on, delivery_partner, and payment_method
+        instance = self.get_queryset().first()  # Get the existing order
+        data = request.data
+        user = self.request.user
+
+        if data.get('payment_status') and data['payment_status'] is True:
+            if user.referral_id is not None:
+                reward_matching(user)
+
+        serializer = self.get_serializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class OrderList(ListAPIView):

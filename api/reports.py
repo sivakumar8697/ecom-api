@@ -156,6 +156,7 @@ def referral_report(user=None):
         data = {
             'user_id': user_id,
             'name': referral.full_name,
+            'mobile_number': referral.mobile_number.national_number,
             'total_sales': total_sales,
             'sales_consider': total_sales,
             'sales_carry_forwarded': 0,
@@ -226,6 +227,7 @@ def team_details_report(current_user):
             data['level'] = level
             data['user_id'] = user.pk
             data['name'] = user.full_name
+            data['mobile_number'] = user.mobile_number.national_number
             data['city'] = user.addresses.first().city if user.addresses.first() else "City Unknown"
             data['referral'] = user.referral_id
             data['status'] = "Active" if user.is_active else "Inactive"
@@ -242,7 +244,9 @@ def team_details_report(current_user):
     # Start with level 0 for the current user
     get_user_details(current_user, level=0)
 
-    return team_details
+    sorted_team_details = sorted(team_details, key=lambda x: x['level'])
+
+    return sorted_team_details
 
 
 def team_details_tree_report(current_user):
@@ -250,6 +254,7 @@ def team_details_tree_report(current_user):
         data = {
             'user_id': user.pk,
             'name': user.full_name,
+            'mobile_number': user.mobile_number.national_number,
             'city': user.addresses.first().city if user.addresses.first() else "City Unknown",
             'referral': user.referral_id,
             'status': "Active" if user.is_active else "Inactive",

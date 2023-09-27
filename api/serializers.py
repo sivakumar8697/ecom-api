@@ -102,7 +102,7 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('order_id', 'invoice_number', 'total_amount', "total_tax", "shipping_address", 'order_items', 'user',
-                  'delivered_on', 'delivery_partner')
+                  'delivered_on', 'delivery_partner', 'payment_status', 'payment_method')
 
     def create(self, validated_data):
         request = self.context.get('request')
@@ -118,6 +118,16 @@ class OrderSerializer(serializers.ModelSerializer):
         OrderItem.objects.bulk_create(order_items)
 
         return order
+
+    def update(self, instance, validated_data):
+        payment_status = validated_data.get('payment_status', instance.payment_status)
+        instance.payment_status = payment_status
+        instance.delivered_on = validated_data.get('delivered_on', instance.delivered_on)
+        instance.delivery_partner = validated_data.get('delivery_partner', instance.delivery_partner)
+        instance.payment_method = validated_data.get('payment_method', instance.payment_method)
+        instance.save()
+
+        return instance
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)

@@ -138,7 +138,8 @@ class Order(models.Model):
                                       help_text="Invoice number starting with 'M' and 8 digits.")
     delivered_on = models.DateField(null=True, blank=True, help_text="Date when the order was delivered.")
     delivery_partner = models.CharField(max_length=255, null=True, blank=True, help_text="Delivery partner's name.")
-
+    payment_status = models.BooleanField(default=False)
+    payment_method = models.CharField(max_length=20, null=True, blank=True)
     @property
     def order_items(self):
         return self.order_items.all()
@@ -292,7 +293,7 @@ class BankDetail(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bank_details_user')
     account_holder_name = models.CharField(max_length=255)
     account_no = models.CharField(max_length=50)
-    ifsc_code = models.CharField(max_length=11)
+    ifsc_code = models.CharField(max_length=50)
     account_type = models.CharField(max_length=50)
     branch = models.CharField(max_length=255, blank=True, null=True)
 
