@@ -6,7 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.utils import timezone
 from rest_framework import status, serializers
 from rest_framework.generics import RetrieveUpdateAPIView, CreateAPIView, ListCreateAPIView, ListAPIView, \
-    RetrieveAPIView
+    RetrieveAPIView, get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -209,34 +209,17 @@ class OrderUpdateView(APIView):
         if not order_id:
             return Response({'detail': 'order_id parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            # Try to get the order from the database
-            order = Order.objects.get(order_id=order_id)
-        except Order.DoesNotExist:
-            return Response({'detail': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        # Try to get the order from the database
+        order = get_object_or_404(Order, order_id=order_id)
 
-        # Extract and update fields from the request data if they exist
-        if 'delivered_on' in request.data:
-            order.delivered_on = request.data['delivered_on']
+        # Create an instance of the serializer and call the update method
+        serializer = OrderSerializer(order, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.update(order, serializer.validated_data)
 
-        if 'delivery_partner' in request.data:
-            order.delivery_partner = request.data['delivery_partner']
-
-        if 'payment_status' in request.data:
-            # Validate that payment_status is either 'pending' or 'completed'
-            if request.data['payment_status'] in ['pending', 'completed']:
-                order.payment_status = request.data['payment_status']
-            else:
-                return Response({'detail': 'Invalid payment_status value'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if 'payment_method' in request.data:
-            order.payment_method = request.data['payment_method']
-
-        order.save()  # Save the updated order
-
-        # Serialize and return the updated order
-        serializer = OrderSerializer(order)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OrderList(ListAPIView):
